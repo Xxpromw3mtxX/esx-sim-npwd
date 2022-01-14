@@ -1,0 +1,114 @@
+ESX = nil
+
+local SimTab = {}
+local number = {}
+local elements = {}
+local optElements = {
+	{label = _U('use'), value = 'use'},
+	{label = _U('give'), value = 'give'},
+	{label = _U('throw'), value = 'throw'},
+}
+
+Citizen.CreateThread(function()
+	while ESX == nil do
+		TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+		Citizen.Wait(10)
+	end
+end)
+
+RegisterNetEvent('esx-sim-npwd:sendNotification')
+AddEventHandler('esx-sim-npwd:sendNotification', function(nType, nMsg)
+	if Config.usingMythic then
+		TriggerEvent('mythic_notify:client:SendAlert', {type = nType, text = nMsg, length = 2500})
+	else
+		SetNotificationTextEntry('STRING')
+		AddTextComponentString(nMsg)
+		DrawNotification(0,1)
+	end
+end)
+
+function openMenu()
+	for i = 1, #SimTab, 1 do
+		table.insert(elements, {
+			label = SimTab[i].label,
+			value = SimTab[i].number,
+		})
+	end
+
+	ESX.UI.Menu.CloseAll()
+
+	ESX.UI.Menu.Open('default', GetCurrentResourceName(), 'simSelection',
+	{
+		title = _U('simMenu'),
+		align = Config.menuAlign,
+		elements = elements,
+	},
+	function(data, menu)
+		local currentValue = data.current.value
+		
+		openFunctionMenu(currentValue)
+	end,
+	function(data, menu)
+		menu.close()
+		elements = {}
+	end
+	)
+end
+
+function openFunctionMenu(phoneNumber)
+	elements = {}
+
+	ESX.UI.Menu.CloseAll()
+
+	ESX.UI.Menu.Open('default', GetCurrentResourceName(), 'simOptions',
+	{
+		title = _U('simOptions'),
+		align = Config.menuAlign,
+		elements = optElements,
+	},
+	function(data, menu)
+		local value = data.current.value
+
+		if value == 'use' then
+			ESX.TriggerServerCallback('esx-sim-npwd:getItemAmount', function(qtty)
+				if qtty >= 0 then
+					TriggerServerEvent("esx-sim-npwd:switchSim", phoneNumber)
+					menu.close()
+				else
+					TriggerEvent('esx-sim-npwd:sendNotification', 'error', _U('noPhone'))
+				end
+			end, 'phone')
+		elseif value == 'give' then
+			local closestPlayer, closestDistance = ESX.Game.GetClosestPlayer()
+			local closestPed = GetPlayerPed(closestPlayer)
+
+			if closestPlayer ~= -1 and closestDistance < 3.0 then
+				TriggerServerEvent('esx-sim-npwd:giveNumber', GetPlayerServerId(closestPlayer), phoneNumber)
+				table.remove(SimTab, i)
+				menu.close()
+			else
+				TriggerEvent('esx-sim-npwd:sendNotification', 'error', _U('noPlayerNear'))
+			end
+		elseif value == 'throw' then
+			TriggerServerEvent('esx-sim-npwd:throwSim', phoneNumber)
+			table.remove(SimTab, i)
+			menu.close()
+		end
+	end,
+	function(data, menu)
+		menu.close()
+		openMenu()
+	end
+	)
+end
+
+RegisterCommand(Config.defaultCommand, function()
+	ESX.TriggerServerCallback("esx-sim-npwd:fetchSimDB", function(result)
+    	SimTab = result
+		openMenu()
+	end)
+end, false)
+
+if Config.usingKeymap then
+	RegisterKeyMapping(Config.defaultCommand, _U('keyMapdesc'), 'keyboard', Config.customKey)
+end
