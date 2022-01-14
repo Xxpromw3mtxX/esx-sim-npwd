@@ -1,13 +1,7 @@
 ESX = nil
 
-local SimTab = {}
-local number = {}
+local SIM = {}
 local elements = {}
-local optElements = {
-	{label = _U('use'), value = 'use'},
-	{label = _U('give'), value = 'give'},
-	{label = _U('throw'), value = 'throw'},
-}
 
 Citizen.CreateThread(function()
 	while ESX == nil do
@@ -28,10 +22,10 @@ AddEventHandler('esx-sim-npwd:sendNotification', function(nType, nMsg)
 end)
 
 function openMenu()
-	for i = 1, #SimTab, 1 do
+	for i = 1, #SIM, 1 do
 		table.insert(elements, {
-			label = SimTab[i].label,
-			value = SimTab[i].number,
+			label = SIM[i].label,
+			value = SIM[i].number,
 		})
 	end
 
@@ -56,6 +50,11 @@ function openMenu()
 end
 
 function openFunctionMenu(phoneNumber)
+	local optElements = {
+		{label = _U('use'), value = 'use'},
+		{label = _U('give'), value = 'give'},
+		{label = _U('throw'), value = 'throw'},
+	}
 	elements = {}
 
 	ESX.UI.Menu.CloseAll()
@@ -104,9 +103,10 @@ end
 
 RegisterCommand(Config.defaultCommand, function()
 	ESX.TriggerServerCallback("esx-sim-npwd:fetchSimDB", function(result)
-    	SimTab = result
+		SIM = result
 		openMenu()
 	end)
+	
 end, false)
 
 if Config.usingKeymap then
