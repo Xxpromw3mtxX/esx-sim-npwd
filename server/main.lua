@@ -1,3 +1,7 @@
+ESX = nil
+
+TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
+
 ESX.RegisterUsableItem('sim_card', function(source)
 	local _source = source
 	local xPlayer = ESX.GetPlayerFromId(_source)
